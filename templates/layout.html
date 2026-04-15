@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard</title>
+
+  <!-- Core CSS -->
+  <link href="{{ url_for('static', filename='css/nucleo-icons.css') }}" rel="stylesheet" />
+  <link href="{{ url_for('static', filename='css/nucleo-svg.css') }}" rel="stylesheet" />
+  <link href="{{ url_for('static', filename='css/soft-ui-dashboard.css') }}" rel="stylesheet" />
+
+  <!-- Font Awesome -->
+  <script src="https://kit.fontawesome.com/5e0f999e57.js" crossorigin="anonymous"></script>
+</head>
+<body class="g-sidenav-show bg-gray-100">
+  <main class="main-content position-relative border-radius-lg">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Core JS -->
+  <script src="{{ url_for('static', filename='js/core/popper.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/core/bootstrap.min.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+  <h4 class="mb-4 text-primary"><i class="fas fa-user-shield"></i> Admin Dashboard</h4>
+
+  <!-- 🔶 Pending Payments -->
+  <div class="card p-4 mb-4">
+    <h5><i class="fas fa-hourglass-half text-warning me-2"></i>Pending Payments</h5>
+    {% if pending %}
+      {% for p in pending %}
+        <div class="d-flex align-items-center my-3">
+          <img src="{{ p.screenshot }}" alt="payment" height="300" class="border-radius-lg">
+          <div class="ms-4">
+            <h6>{{ p.username }} <small class="text-muted">({{ p.email }})</small></h6>
+            <p>Subject: <strong>{{ p.subject_name }}</strong> (ID: {{ p.subject_id }})</p>
+            <form method="POST" action="/admin/approve_subject_payment">
+              <input type="hidden" name="email" value="{{ p.email }}">
+              <input type="hidden" name="subject_id" value="{{ p.subject_id }}">
+              <button class="btn btn-success btn-sm mt-2">Approve</button>
+            </form>
+          </div>
+        </div>
+        <hr>
+      {% endfor %}
+    {% else %}
+      <p>No pending approvals.</p>
+    {% endif %}
+  </div>
+
+  <!-- ➕ Add New Subject -->
+  <div class="card p-4 mb-4">
+    <h5><i class="fas fa-plus-circle text-info me-2"></i>Add New Subject</h5>
+    <form method="POST" action="/admin/add_subject" class="row mt-3">
+      <div class="col-md-6 mb-3">
+        <label>Subject Name</label>
+        <input class="form-control" name="subject_name" required>
+      </div>
+      <div class="col-md-6 d-flex align-items-end">
+        <button class="btn btn-success w-100" type="submit">Add Subject</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 📚 Subjects Overview -->
+  <div class="card p-4">
+    <h5><i class="fas fa-book-open text-primary me-2"></i>Subjects</h5>
+    <ul class="mt-3">
+      {% for subject in subjects %}
+        <li>
+          <strong>{{ subject.name }}</strong> (ID: {{ subject.id }}) —
+          <a class="btn btn-outline-dark btn-sm" href="/admin/subject/{{ subject.id }}">Manage Tests</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}
