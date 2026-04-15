@@ -1,94 +1,950 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="container py-4">
-  <h4 class="mb-3">📘 {{ subject.name }} (ID: {{ subject.id }})</h4>
 
-  <!-- ➕ Add Test -->
-  <form method="POST" action="/admin/add_test" enctype="multipart/form-data" class="row mb-4">
-    <input type="hidden" name="subject_id" value="{{ subject.id }}">
-    <div class="col-md-3">
-      <input class="form-control" name="test_name" placeholder="Test Name" required>
+<style>
+  /* ── Design Tokens ── */
+  :root {
+    --bg:           #0d1117;
+    --surface:      #161b22;
+    --surface-2:    #1c2128;
+    --surface-3:    #21262d;
+    --border:       #30363d;
+    --border-soft:  rgba(48,54,61,0.6);
+    --text:         #e6edf3;
+    --text-muted:   #8b949e;
+    --text-faint:   #484f58;
+    --accent:       #7c5cfc;
+    --accent-hover: #9b7dff;
+    --accent-glow:  rgba(124,92,252,0.15);
+    --accent-border:rgba(124,92,252,0.3);
+    --danger:       #f85149;
+    --danger-hover: #ff6b6b;
+    --danger-bg:    rgba(248,81,73,0.1);
+    --success:      #3fb950;
+    --success-bg:   rgba(63,185,80,0.1);
+    --warning:      #d29922;
+    --warning-bg:   rgba(210,153,34,0.1);
+    --blue:         #58a6ff;
+    --blue-bg:      rgba(88,166,255,0.1);
+    --radius-sm:    6px;
+    --radius-md:    10px;
+    --radius-lg:    14px;
+    --shadow-sm:    0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md:    0 4px 16px rgba(0,0,0,0.5);
+    --shadow-lg:    0 8px 32px rgba(0,0,0,0.6);
+    --transition:   180ms cubic-bezier(0.16,1,0.3,1);
+  }
+
+  /* ── Page Shell ── */
+  .tests-page {
+    min-height: calc(100vh - 60px);
+    background: var(--bg);
+    padding: 32px 28px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+    color: var(--text);
+  }
+
+  @media (max-width: 768px) { .tests-page { padding: 20px 16px; } }
+
+  /* ── Back / Breadcrumb ── */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+
+  .breadcrumb a {
+    color: var(--text-muted);
+    text-decoration: none;
+    display: flex; align-items: center; gap: 5px;
+    transition: color var(--transition);
+  }
+
+  .breadcrumb a:hover { color: var(--accent); }
+  .breadcrumb-sep { color: var(--text-faint); }
+  .breadcrumb-current { color: var(--text); font-weight: 500; }
+
+  /* ── Page Header ── */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .page-header-left { display: flex; align-items: center; gap: 14px; }
+
+  .subject-icon-lg {
+    width: 48px; height: 48px;
+    background: var(--accent-glow);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius-lg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; flex-shrink: 0;
+  }
+
+  .page-header-left h1 {
+    font-size: 22px; font-weight: 700;
+    color: var(--text); margin: 0 0 5px; letter-spacing: -0.3px;
+  }
+
+  .page-header-meta {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+
+  .meta-chip {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 11px; font-weight: 500;
+    padding: 3px 10px; border-radius: 20px;
+  }
+
+  .avg-chip {
+    background: var(--success-bg);
+    border: 1px solid rgba(63,185,80,0.3);
+    color: var(--success);
+  }
+
+  /* ── Stats Row ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .stat-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 24px; font-weight: 700; color: var(--text);
+    letter-spacing: -0.5px; line-height: 1;
+  }
+
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.success { color: var(--success); }
+  .stat-value.blue { color: var(--blue); }
+
+  /* ── Two-Column Layout ── */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) { .content-grid { grid-template-columns: 1fr; } }
+
+  /* ── Sidebar Panel (Add Test) ── */
+  .side-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 80px;
+  }
+
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .panel-header-icon {
+    width: 30px; height: 30px;
+    background: var(--accent-glow);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent); flex-shrink: 0;
+  }
+
+  .panel-header h2 {
+    font-size: 14px; font-weight: 600;
+    color: var(--text); margin: 0;
+  }
+
+  .panel-body { padding: 20px; }
+
+  /* ── Form Elements ── */
+  .form-group { margin-bottom: 16px; }
+
+  .form-label {
+    display: block; font-size: 11px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.6px; margin-bottom: 7px;
+  }
+
+  .form-input, .form-select {
+    width: 100%; background: var(--surface-3);
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    color: var(--text); font-size: 13px; padding: 9px 13px;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    outline: none; box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .form-input::placeholder { color: var(--text-faint); }
+
+  .form-input:focus, .form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .file-input-wrapper {
+    position: relative;
+    background: var(--surface-3);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    text-align: center;
+    transition: border-color var(--transition), background var(--transition);
+    cursor: pointer;
+  }
+
+  .file-input-wrapper:hover {
+    border-color: var(--accent-border);
+    background: var(--accent-glow);
+  }
+
+  .file-input-wrapper input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    width: 100%; height: 100%;
+  }
+
+  .file-input-label {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    pointer-events: none;
+  }
+
+  .file-input-label svg { color: var(--text-faint); }
+  .file-input-label span { font-size: 12px; color: var(--text-muted); }
+  .file-input-label strong { font-size: 11px; color: var(--text-faint); }
+
+  .btn-primary-full {
+    width: 100%; background: var(--accent); color: #fff;
+    border: none; border-radius: var(--radius-md);
+    font-size: 13px; font-weight: 600; padding: 10px 18px;
+    cursor: pointer; display: flex; align-items: center;
+    justify-content: center; gap: 7px;
+    transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  }
+
+  .btn-primary-full:hover {
+    background: var(--accent-hover);
+    box-shadow: 0 4px 14px rgba(124,92,252,0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary-full:active { transform: translateY(0); }
+
+  /* ── Tests Area ── */
+  .section-title {
+    font-size: 13px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.6px; margin-bottom: 14px;
+  }
+
+  /* ── Test Card ── */
+  .test-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: border-color var(--transition);
+  }
+
+  .test-card:hover { border-color: rgba(124,92,252,0.25); }
+
+  .test-card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 12px;
+    background: var(--surface-2);
+  }
+
+  .test-card-header-left {
+    display: flex; align-items: center; gap: 12px; min-width: 0;
+  }
+
+  .test-number {
+    width: 28px; height: 28px;
+    background: var(--accent-glow);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--accent); flex-shrink: 0;
+  }
+
+  .test-name {
+    font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .test-badges {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+
+  .badge {
+    font-size: 11px; font-weight: 500;
+    padding: 2px 8px; border-radius: 8px;
+    border: 1px solid transparent;
+  }
+
+  .badge-marks {
+    background: var(--blue-bg); border-color: rgba(88,166,255,0.3); color: var(--blue);
+  }
+
+  .badge-key-yes {
+    background: var(--success-bg); border-color: rgba(63,185,80,0.3); color: var(--success);
+  }
+
+  .badge-key-no {
+    background: var(--surface-3); border-color: var(--border); color: var(--text-faint);
+  }
+
+  .test-card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+  .btn-icon {
+    width: 30px; height: 30px;
+    background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted); text-decoration: none; cursor: pointer;
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+  }
+
+  .btn-icon:hover {
+    background: var(--surface-2); color: var(--text); border-color: var(--accent-border);
+  }
+
+  .btn-icon.danger:hover {
+    background: var(--danger-bg); color: var(--danger); border-color: rgba(248,81,73,0.3);
+  }
+
+  /* ── Test Card Body (Accordion) ── */
+  .test-card-body { padding: 0; }
+
+  .test-section {
+    border-top: 1px solid var(--border);
+    padding: 16px 20px;
+  }
+
+  .test-section-title {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.6px; color: var(--text-muted);
+    margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  }
+
+  .test-section-title svg { color: var(--text-faint); }
+
+  /* ── Upload Key Form ── */
+  .upload-key-form {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+
+  .upload-key-form .file-input-wrapper-inline {
+    flex: 1; min-width: 180px;
+    position: relative;
+    background: var(--surface-3);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    padding: 8px 14px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-muted);
+    cursor: pointer; transition: border-color var(--transition);
+  }
+
+  .upload-key-form .file-input-wrapper-inline:hover { border-color: var(--accent-border); }
+  .upload-key-form .file-input-wrapper-inline input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  .btn-upload-sm {
+    background: var(--surface-3); border: 1px solid var(--border);
+    color: var(--text); font-size: 12px; font-weight: 600;
+    padding: 8px 14px; border-radius: var(--radius-md); cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+  }
+
+  .btn-upload-sm:hover {
+    background: var(--accent-glow); border-color: var(--accent-border); color: var(--accent);
+  }
+
+  /* ── Submissions Table ── */
+  .submissions-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+
+  .submissions-table th {
+    text-align: left; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--text-faint); padding: 0 10px 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .submissions-table td {
+    padding: 10px 10px 10px 0;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: middle;
+  }
+
+  .submissions-table tr:last-child td { border-bottom: none; }
+
+  .submission-email {
+    font-size: 13px; color: var(--text); font-weight: 500;
+  }
+
+  .submission-email small {
+    display: block; font-size: 11px; color: var(--text-muted); font-weight: 400;
+  }
+
+  /* ── Marks Input ── */
+  .marks-form { display: flex; align-items: center; gap: 8px; }
+
+  .marks-input {
+    width: 80px; background: var(--surface-3);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 13px;
+    padding: 6px 10px; outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    text-align: center; font-variant-numeric: tabular-nums;
+  }
+
+  .marks-input:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow);
+  }
+
+  .marks-divider { color: var(--text-faint); font-size: 12px; }
+
+  .btn-save-marks {
+    background: var(--surface-3); border: 1px solid var(--border);
+    color: var(--text-muted); font-size: 11px; font-weight: 600;
+    padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer;
+    transition: all var(--transition);
+  }
+
+  .btn-save-marks:hover {
+    background: var(--success-bg); border-color: rgba(63,185,80,0.3);
+    color: var(--success);
+  }
+
+  /* ── Evaluated Upload ── */
+  .eval-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .eval-file-wrapper {
+    flex: 1; min-width: 180px;
+    position: relative;
+    background: var(--surface-3); border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: var(--text-muted); cursor: pointer;
+    transition: border-color var(--transition);
+  }
+
+  .eval-file-wrapper:hover { border-color: var(--accent-border); }
+  .eval-file-wrapper input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  .btn-eval-upload {
+    background: var(--surface-3); border: 1px solid var(--border);
+    color: var(--text-muted); font-size: 11px; font-weight: 600;
+    padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer;
+    white-space: nowrap; transition: all var(--transition);
+  }
+
+  .btn-eval-upload:hover {
+    background: var(--blue-bg); border-color: rgba(88,166,255,0.3); color: var(--blue);
+  }
+
+  /* ── Status Tags ── */
+  .status-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 500;
+    padding: 3px 8px; border-radius: 8px; border: 1px solid transparent;
+  }
+
+  .status-tag.graded {
+    background: var(--success-bg); border-color: rgba(63,185,80,0.3); color: var(--success);
+  }
+
+  .status-tag.submitted {
+    background: var(--blue-bg); border-color: rgba(88,166,255,0.3); color: var(--blue);
+  }
+
+  .status-tag.pending {
+    background: var(--warning-bg); border-color: rgba(210,153,34,0.3); color: var(--warning);
+  }
+
+  /* ── Empty Submissions ── */
+  .no-submissions {
+    text-align: center; padding: 24px;
+    color: var(--text-faint); font-size: 13px;
+  }
+
+  .no-submissions svg { margin: 0 auto 8px; display: block; }
+
+  /* ── Delete Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 1000;
+    align-items: center; justify-content: center;
+  }
+
+  .modal-overlay.active { display: flex; }
+
+  .modal-box {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 28px;
+    max-width: 400px; width: 90%;
+    box-shadow: var(--shadow-lg);
+    animation: modalIn 200ms cubic-bezier(0.16,1,0.3,1);
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-icon-danger {
+    width: 44px; height: 44px; background: var(--danger-bg);
+    border: 1px solid rgba(248,81,73,0.3); border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px; color: #f85149;
+  }
+
+  .modal-box h3 { font-size: 16px; font-weight: 600; color: var(--text); margin: 0 0 8px; }
+  .modal-box p { font-size: 13px; color: var(--text-muted); margin: 0 0 22px; line-height: 1.5; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  .btn-cancel {
+    background: var(--surface-3); border: 1px solid var(--border);
+    color: var(--text-muted); font-size: 13px; font-weight: 500;
+    padding: 9px 18px; border-radius: var(--radius-md); cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+  }
+
+  .btn-cancel:hover { background: var(--surface-2); color: var(--text); }
+
+  .btn-delete-confirm {
+    background: #f85149; border: none; color: #fff;
+    font-size: 13px; font-weight: 600;
+    padding: 9px 18px; border-radius: var(--radius-md); cursor: pointer;
+    transition: background var(--transition), box-shadow var(--transition);
+  }
+
+  .btn-delete-confirm:hover {
+    background: #ff6b6b; box-shadow: 0 4px 12px rgba(248,81,73,0.35);
+  }
+</style>
+
+<!-- Delete Test Modal -->
+<div class="modal-overlay" id="deleteTestModal">
+  <div class="modal-box">
+    <div class="modal-icon-danger">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/>
+      </svg>
     </div>
-    <div class="col-md-3">
-      <input class="form-control" name="total_marks" type="number" placeholder="Total Marks" required>
-    </div>
-    <div class="col-md-4">
-      <input class="form-control" name="question_file" type="file" required>
-    </div>
-    <div class="col-md-2">
-      <button class="btn btn-success w-100">Add Test</button>
-    </div>
-  </form>
-
-  <!-- 📄 Test List -->
-  {% for test in subject.tests %}
-    <div class="border rounded p-3 mb-3 bg-info-subtle">
-      <h6>{{ test.name }} (ID: {{ test.id }}) — 🎯 {{ test.total_marks }} marks</h6>
-      <p>
-        📄 <a href="/files/questions/{{ test.question_file }}" target="_blank">View Question</a>
-        {% if test.key_file %} | 🗝️ <a href="/files/keys/{{ test.key_file }}" target="_blank">View Key</a> {% endif %}
-      </p>
-
-      <!-- Upload Key -->
-      {% if not test.key_file %}
-  <form method="POST" action="/admin/upload_key" enctype="multipart/form-data" class="row">
-    <input type="hidden" name="test_id" value="{{ test.id }}">
-    <div class="col-md-6 mb-2">
-      <input type="file" name="key_pdf" class="form-control" required>
-    </div>
-    <div class="col-md-6 mb-2">
-      <button type="submit" class="btn btn-primary w-100">Upload Key</button>
-    </div>
-  </form>
-{% else %}
-  <p>Answer key uploaded</p>
-{% endif %}
-
-      <!-- Answer Submissions -->
-{% if test.answers %}
-  <h6>Submitted Answers:</h6>
-  <ul>
-    {% for ans in test.answers %}
-      <li class="mb-2">
-        <strong>{{ ans.user.username or ans.user_email }}</strong> 
-        <a href="/uploads/answers/{{ ans.file_name }}" target="_blank">Answer PDF</a>
-        | Marks: {% set m = (test.marks | selectattr('user_email', 'equalto', ans.user_email) | list) %}{{ m[0].score if m else 'N/A' }}
-
-        <!-- Upload Evaluated PDF -->
-        <form method="POST" action="/admin/upload_evaluated" enctype="multipart/form-data" class="d-inline ms-2 me-2">
-          <input type="hidden" name="test_id" value="{{ test.id }}">
-          <input type="hidden" name="user_email" value="{{ ans.user_email }}">
-          <input type="file" name="evaluated_pdf" accept="application/pdf" class="form-control form-control-sm d-inline w-auto" required>
-          <button type="submit" class="btn btn-sm btn-outline-success">Upload</button>
-        </form>
-
-        <!-- Marks form inline -->
-        <form method="POST" action="/admin/update_marks" class="d-inline">
-          <input type="hidden" name="test_id" value="{{ test.id }}">
-          <input type="hidden" name="email" value="{{ ans.user_email }}">
-          <input type="number" name="marks" placeholder="Marks" class="form-control form-control-sm d-inline w-auto" style="width: 70px;" required>
-          <button type="submit" class="btn btn-sm btn-outline-success">Submit</button>
-        </form>
-      </li>
-    {% endfor %}
-  </ul>
-{% else %}
-  <p class="text-muted">No submissions.</p>
-{% endif %}
-
-      <!-- Delete Test -->
-      <form method="POST" action="/admin/delete_test" class="mt-2" onsubmit="return confirm('Are you sure?')">
-        <input type="hidden" name="test_id" value="{{ test.id }}">
-        <button class="btn btn-outline-danger btn-sm">Delete Test</button>
+    <h3>Delete Test?</h3>
+    <p>This will permanently delete this test along with all student submissions and marks. This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+      <form id="deleteTestForm" method="POST" action="/admin/delete_test" style="margin:0;">
+        <input type="hidden" name="test_id" id="deleteTestId">
+        <button type="submit" class="btn-delete-confirm">Delete Test</button>
       </form>
     </div>
-  {% endfor %}
+  </div>
+</div>
 
-  <!-- 📊 Average -->
-  <div class="mt-3">
-    <strong>📈 Average Score (%):</strong> {{ average or "N/A" }}
+<div class="tests-page">
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <a href="/admin/subjects">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Subjects
+    </a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ subject.name }}</span>
+  </nav>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="subject-icon-lg">{{ subject.name[0] }}</div>
+      <div>
+        <h1>{{ subject.name }}</h1>
+        <div class="page-header-meta">
+          <span class="meta-chip">Subject ID: {{ subject.id }}</span>
+          <span class="meta-chip">{{ subject.tests|length }} Test{{ 's' if subject.tests|length != 1 else '' }}</span>
+          {% if average is not none %}
+          <span class="meta-chip avg-chip">Avg. Score: {{ average }}%</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
 
-  <a href="/admin" class="btn btn-secondary mt-3">← Back to Dashboard</a>
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total Tests</div>
+      <div class="stat-value accent">{{ subject.tests|length }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Marks</div>
+      <div class="stat-value blue">{{ subject.tests | sum(attribute='total_marks') or 0 }}</div>
+    </div>
+    {% if average is not none %}
+    <div class="stat-card">
+      <div class="stat-label">Class Average</div>
+      <div class="stat-value success">{{ average }}%</div>
+    </div>
+    {% endif %}
+    <div class="stat-card">
+      <div class="stat-label">Keys Uploaded</div>
+      <div class="stat-value">{{ subject.tests | selectattr('key_file') | list | length }}</div>
+    </div>
+  </div>
+
+  <!-- Content Grid -->
+  <div class="content-grid">
+
+    <!-- Sidebar: Add Test -->
+    <div class="side-panel">
+      <div class="panel-header">
+        <div class="panel-header-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </div>
+        <h2>Add New Test</h2>
+      </div>
+      <div class="panel-body">
+        <form method="POST" action="/admin/add_test" enctype="multipart/form-data">
+          <input type="hidden" name="subject_id" value="{{ subject.id }}">
+
+          <div class="form-group">
+            <label class="form-label" for="test_name">Test Name</label>
+            <input
+              type="text" id="test_name" name="test_name"
+              class="form-input"
+              placeholder="e.g. Unit Test 1, Mid-Term…"
+              required autocomplete="off"
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="total_marks">Total Marks</label>
+            <input
+              type="number" id="total_marks" name="total_marks"
+              class="form-input" placeholder="e.g. 100"
+              min="1" required
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Question Paper (PDF)</label>
+            <div class="file-input-wrapper">
+              <input type="file" name="question_file" accept=".pdf" required id="questionFile">
+              <div class="file-input-label" id="questionFileLabel">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span>Click to upload PDF</span>
+                <strong>Max 10MB</strong>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary-full">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Test
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Tests List -->
+    <div class="tests-area">
+      <div class="section-title">
+        Tests ({{ subject.tests|length }})
+      </div>
+
+      {% if subject.tests %}
+        {% for test in subject.tests %}
+        <div class="test-card">
+
+          <!-- Test Card Header -->
+          <div class="test-card-header">
+            <div class="test-card-header-left">
+              <div class="test-number">{{ loop.index }}</div>
+              <div class="test-name-block">
+                <p class="test-name">{{ test.name }}</p>
+                <div class="test-badges">
+                  <span class="badge badge-marks">{{ test.total_marks }} marks</span>
+                  {% if test.key_file %}
+                    <span class="badge badge-key-yes">✓ Answer Key</span>
+                  {% else %}
+                    <span class="badge badge-key-no">No Key</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="test-card-actions">
+              {% if test.question_file %}
+              <a
+                href="/uploads/questions/{{ test.question_file }}"
+                target="_blank"
+                class="btn-icon"
+                title="View Question Paper"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+              </a>
+              {% endif %}
+              {% if test.key_file %}
+              <a
+                href="/uploads/keys/{{ test.key_file }}"
+                target="_blank"
+                class="btn-icon"
+                title="View Answer Key"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                </svg>
+              </a>
+              {% endif %}
+              <button
+                class="btn-icon danger"
+                onclick="openDeleteModal('{{ test.id }}')"
+                title="Delete Test"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                  <path d="M9 6V4h6v2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Test Card Body -->
+          <div class="test-card-body">
+
+            <!-- Upload Answer Key -->
+            <div class="test-section">
+              <div class="test-section-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5"/>
+                </svg>
+                Answer Key
+              </div>
+              <form method="POST" action="/admin/upload_key" enctype="multipart/form-data" class="upload-key-form">
+                <input type="hidden" name="test_id" value="{{ test.id }}">
+                <div class="file-input-wrapper-inline">
+                  <input type="file" name="key_pdf" accept=".pdf" required>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  {% if test.key_file %}Replace key PDF{% else %}Upload key PDF{% endif %}
+                </div>
+                <button type="submit" class="btn-upload-sm">
+                  {% if test.key_file %}Replace{% else %}Upload{% endif %}
+                </button>
+              </form>
+            </div>
+
+            <!-- Submissions & Marks -->
+            <div class="test-section">
+              <div class="test-section-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                Student Submissions & Marks
+              </div>
+
+              {% if test.answers %}
+              <table class="submissions-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Answer</th>
+                    <th>Marks</th>
+                    <th>Evaluated PDF</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for answer in test.answers %}
+                  {% set student_mark = answer.user_email %}
+                  {% set mark_record = answer.marks | selectattr('user_email', 'equalto', answer.user_email) | first | default(None) %}
+                  <tr>
+                    <td>
+                      <div class="submission-email">
+                        {{ answer.user_email }}
+                      </div>
+                    </td>
+                    <td>
+                      <a
+                        href="/uploads/answers/{{ answer.file_name }}"
+                        target="_blank"
+                        class="btn-icon"
+                        title="View Submission"
+                        style="display:inline-flex;"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                          <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                      </a>
+                    </td>
+                    <td>
+                      <form method="POST" action="/admin/update_marks" class="marks-form">
+                        <input type="hidden" name="test_id" value="{{ test.id }}">
+                        <input type="hidden" name="email" value="{{ answer.user_email }}">
+                        <input
+                          type="number"
+                          name="marks"
+                          class="marks-input"
+                          step="0.5" min="0"
+                          max="{{ test.total_marks }}"
+                          value="{{ answer.mark.score if answer.mark else '' }}"
+                          placeholder="—"
+                        >
+                        <span class="marks-divider">/ {{ test.total_marks }}</span>
+                        <button type="submit" class="btn-save-marks">Save</button>
+                      </form>
+                    </td>
+                    <td>
+                      <form method="POST" action="/admin/upload_evaluated" enctype="multipart/form-data" class="eval-form">
+                        <input type="hidden" name="test_id" value="{{ test.id }}">
+                        <input type="hidden" name="user_email" value="{{ answer.user_email }}">
+                        <div class="eval-file-wrapper">
+                          <input type="file" name="evaluated_pdf" accept=".pdf" required>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                          </svg>
+                          PDF
+                        </div>
+                        <button type="submit" class="btn-eval-upload">Upload</button>
+                      </form>
+                    </td>
+                    <td>
+                      {% if answer.mark and answer.mark.score is not none %}
+                        <span class="status-tag graded">Graded</span>
+                      {% elif answer.file_name %}
+                        <span class="status-tag submitted">Submitted</span>
+                      {% else %}
+                        <span class="status-tag pending">Pending</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              {% else %}
+              <div class="no-submissions">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                </svg>
+                No submissions yet
+              </div>
+              {% endif %}
+            </div>
+
+          </div>
+        </div>
+        {% endfor %}
+
+      {% else %}
+        <div style="text-align:center; padding:64px 24px; background:var(--surface); border:1px dashed var(--border); border-radius:var(--radius-lg);">
+          <div style="width:52px;height:52px;background:var(--surface-3);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--text-faint);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <h3 style="font-size:15px;font-weight:600;color:var(--text);margin:0 0 8px;">No tests yet</h3>
+          <p style="font-size:13px;color:var(--text-muted);max-width:36ch;margin:0 auto;">Add your first test using the form on the left.</p>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
 </div>
+
+<script>
+  function openDeleteModal(testId) {
+    document.getElementById('deleteTestId').value = testId;
+    document.getElementById('deleteTestModal').classList.add('active');
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('deleteTestModal').classList.remove('active');
+  }
+
+  document.getElementById('deleteTestModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+  });
+
+  // Show selected filename in file input
+  document.getElementById('questionFile').addEventListener('change', function() {
+    const label = document.getElementById('questionFileLabel');
+    if (this.files.length > 0) {
+      label.innerHTML = `
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="9" y1="13" x2="15" y2="13"/>
+        </svg>
+        <span style="color:#3fb950;">${this.files[0].name}</span>
+        <strong>${(this.files[0].size / 1024).toFixed(0)} KB</strong>
+      `;
+    }
+  });
+
+  // Escape key closes modal
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDeleteModal();
+  });
+</script>
+
 {% endblock %}

@@ -1,0 +1,590 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<style>
+  /* ── Design Tokens ── */
+  :root {
+    --bg:           #0d1117;
+    --surface:      #161b22;
+    --surface-2:    #1c2128;
+    --surface-3:    #21262d;
+    --border:       #30363d;
+    --border-soft:  rgba(48,54,61,0.6);
+    --text:         #e6edf3;
+    --text-muted:   #8b949e;
+    --text-faint:   #484f58;
+    --accent:       #7c5cfc;
+    --accent-hover: #9b7dff;
+    --accent-glow:  rgba(124,92,252,0.15);
+    --danger:       #f85149;
+    --danger-hover: #ff6b6b;
+    --danger-bg:    rgba(248,81,73,0.1);
+    --success:      #3fb950;
+    --radius-sm:    6px;
+    --radius-md:    10px;
+    --radius-lg:    14px;
+    --shadow-sm:    0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md:    0 4px 16px rgba(0,0,0,0.5);
+    --shadow-lg:    0 8px 32px rgba(0,0,0,0.6);
+    --transition:   180ms cubic-bezier(0.16,1,0.3,1);
+  }
+
+  /* ── Page Layout ── */
+  .subjects-page {
+    min-height: calc(100vh - 60px);
+    background: var(--bg);
+    padding: 32px 28px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+    color: var(--text);
+  }
+
+  .page-header {
+    margin-bottom: 28px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .page-header-left h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+    margin: 0 0 4px 0;
+  }
+
+  .page-header-left p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .subject-count-badge {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.2px;
+  }
+
+  /* ── Main Grid ── */
+  .subjects-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 768px) {
+    .subjects-grid { grid-template-columns: 1fr; }
+    .subjects-page { padding: 20px 16px; }
+  }
+
+  /* ── Add Subject Panel ── */
+  .add-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    position: sticky;
+    top: 80px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .add-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .add-panel-icon {
+    width: 34px;
+    height: 34px;
+    background: var(--accent-glow);
+    border: 1px solid rgba(124,92,252,0.3);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .add-panel-icon svg { color: var(--accent); }
+
+  .add-panel-header h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 8px;
+  }
+
+  .form-input {
+    width: 100%;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text);
+    font-size: 14px;
+    padding: 10px 14px;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  .form-input::placeholder { color: var(--text-faint); }
+
+  .form-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 11px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-hover);
+    box-shadow: 0 4px 14px rgba(124,92,252,0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active { transform: translateY(0); }
+
+  /* ── Subjects List ── */
+  .subjects-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .subjects-list-header h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin: 0;
+  }
+
+  /* ── Subject Card ── */
+  .subject-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .subject-card:hover {
+    border-color: rgba(124,92,252,0.4);
+    box-shadow: var(--shadow-md), 0 0 0 1px rgba(124,92,252,0.1);
+    transform: translateY(-1px);
+  }
+
+  .subject-card-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .subject-avatar {
+    width: 42px;
+    height: 42px;
+    background: var(--accent-glow);
+    border: 1px solid rgba(124,92,252,0.25);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+
+  .subject-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 4px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .subject-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .subject-meta-dot {
+    width: 3px;
+    height: 3px;
+    background: var(--text-faint);
+    border-radius: 50%;
+  }
+
+  .test-count-pill {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  /* ── Card Actions ── */
+  .subject-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .btn-manage {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+    white-space: nowrap;
+  }
+
+  .btn-manage:hover {
+    background: var(--accent-glow);
+    border-color: rgba(124,92,252,0.5);
+    color: var(--accent);
+  }
+
+  .btn-manage svg { transition: transform var(--transition); }
+  .btn-manage:hover svg { transform: translateX(2px); }
+
+  .btn-danger-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+    white-space: nowrap;
+  }
+
+  .btn-danger-ghost:hover {
+    background: var(--danger-bg);
+    border-color: rgba(248,81,73,0.3);
+    color: var(--danger);
+  }
+
+  /* ── Empty State ── */
+  .empty-state {
+    text-align: center;
+    padding: 64px 24px;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .empty-state-icon {
+    width: 56px;
+    height: 56px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    color: var(--text-faint);
+  }
+
+  .empty-state h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 8px 0;
+  }
+
+  .empty-state p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+    max-width: 36ch;
+    margin-inline: auto;
+  }
+
+  /* ── Delete confirm modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.active { display: flex; }
+
+  .modal-box {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: var(--shadow-lg);
+    animation: modalIn 200ms cubic-bezier(0.16,1,0.3,1);
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-icon {
+    width: 44px; height: 44px;
+    background: var(--danger-bg);
+    border: 1px solid rgba(248,81,73,0.3);
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+    color: var(--danger);
+  }
+
+  .modal-box h3 {
+    font-size: 16px; font-weight: 600;
+    color: var(--text); margin: 0 0 8px 0;
+  }
+
+  .modal-box p {
+    font-size: 13px; color: var(--text-muted);
+    margin: 0 0 22px 0; line-height: 1.5;
+  }
+
+  .modal-box strong { color: var(--text); }
+
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  .btn-cancel {
+    background: var(--surface-3); border: 1px solid var(--border);
+    color: var(--text-muted); font-size: 13px; font-weight: 500;
+    padding: 9px 18px; border-radius: var(--radius-md); cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+  }
+
+  .btn-cancel:hover { background: var(--surface-2); color: var(--text); }
+
+  .btn-delete-confirm {
+    background: var(--danger); border: none;
+    color: #fff; font-size: 13px; font-weight: 600;
+    padding: 9px 18px; border-radius: var(--radius-md); cursor: pointer;
+    transition: background var(--transition), box-shadow var(--transition);
+  }
+
+  .btn-delete-confirm:hover {
+    background: var(--danger-hover);
+    box-shadow: 0 4px 12px rgba(248,81,73,0.35);
+  }
+</style>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal-box">
+    <div class="modal-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+      </svg>
+    </div>
+    <h3>Delete Subject?</h3>
+    <p>This will permanently delete <strong id="deleteSubjectName"></strong> and all its tests, answers, and marks. This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+      <form id="deleteForm" method="POST" action="/admin/delete_subject" style="margin:0;">
+        <input type="hidden" name="subject_id" id="deleteSubjectId">
+        <button type="submit" class="btn-delete-confirm">Delete Subject</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="subjects-page">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Subjects</h1>
+      <p>Manage exam subjects and their tests</p>
+    </div>
+    <span class="subject-count-badge">{{ subjects|length }} subject{{ 's' if subjects|length != 1 else '' }}</span>
+  </div>
+
+  <!-- Main Grid -->
+  <div class="subjects-grid">
+
+    <!-- Add Subject Panel -->
+    <div class="add-panel">
+      <div class="add-panel-header">
+        <div class="add-panel-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+        </div>
+        <h2>Add New Subject</h2>
+      </div>
+
+      <form method="POST" action="/admin/add_subject">
+        <div class="form-group">
+          <label class="form-label" for="subject_name">Subject Name</label>
+          <input
+            type="text"
+            id="subject_name"
+            name="subject_name"
+            class="form-input"
+            placeholder="e.g. Mathematics, Physics…"
+            required
+            autocomplete="off"
+          >
+        </div>
+        <button type="submit" class="btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Add Subject
+        </button>
+      </form>
+    </div>
+
+    <!-- Subjects List -->
+    <div class="subjects-list-area">
+      <div class="subjects-list-header">
+        <h3>All Subjects</h3>
+      </div>
+
+      {% if subjects %}
+        {% for subject in subjects %}
+        <div class="subject-card">
+          <div class="subject-card-left">
+            <div class="subject-avatar">{{ subject.name[0] }}</div>
+            <div class="subject-info">
+              <p class="subject-name">{{ subject.name }}</p>
+              <div class="subject-meta">
+                <span>ID: {{ subject.id }}</span>
+                <span class="subject-meta-dot"></span>
+                <span class="test-count-pill">
+                  {{ subject.tests|length }} test{{ 's' if subject.tests|length != 1 else '' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="subject-card-actions">
+            <a href="/admin/subject/{{ subject.id }}" class="btn-manage">
+              Manage Tests
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </a>
+            <button
+              class="btn-danger-ghost"
+              onclick="openDeleteModal('{{ subject.id }}', '{{ subject.name }}')"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/>
+              </svg>
+              Delete
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+          </div>
+          <h3>No subjects yet</h3>
+          <p>Add your first subject using the form on the left to get started.</p>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function openDeleteModal(subjectId, subjectName) {
+    document.getElementById('deleteSubjectId').value = subjectId;
+    document.getElementById('deleteSubjectName').textContent = '"' + subjectName + '"';
+    document.getElementById('deleteModal').classList.add('active');
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('active');
+  }
+
+  document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+  });
+</script>
+
+{% endblock %}

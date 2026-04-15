@@ -1,0 +1,872 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<style>
+  /* ── Design Tokens (same theme) ── */
+  :root {
+    --bg:            #0d1117;
+    --surface:       #161b22;
+    --surface-2:     #1c2128;
+    --surface-3:     #21262d;
+    --border:        #30363d;
+    --border-soft:   rgba(48,54,61,0.5);
+    --text:          #e6edf3;
+    --text-muted:    #8b949e;
+    --text-faint:    #484f58;
+    --accent:        #7c5cfc;
+    --accent-hover:  #9b7dff;
+    --accent-glow:   rgba(124,92,252,0.15);
+    --accent-border: rgba(124,92,252,0.3);
+    --danger:        #f85149;
+    --danger-bg:     rgba(248,81,73,0.08);
+    --success:       #3fb950;
+    --success-bg:    rgba(63,185,80,0.1);
+    --success-border:rgba(63,185,80,0.3);
+    --warning:       #d29922;
+    --warning-bg:    rgba(210,153,34,0.1);
+    --warning-border:rgba(210,153,34,0.3);
+    --blue:          #58a6ff;
+    --blue-bg:       rgba(88,166,255,0.08);
+    --radius-sm:     6px;
+    --radius-md:     10px;
+    --radius-lg:     14px;
+    --shadow-sm:     0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md:     0 4px 16px rgba(0,0,0,0.5);
+    --shadow-lg:     0 8px 40px rgba(0,0,0,0.7);
+    --transition:    180ms cubic-bezier(0.16,1,0.3,1);
+  }
+
+  /* ── Page Shell ── */
+  .payments-page {
+    min-height: calc(100vh - 60px);
+    background: var(--bg);
+    padding: 32px 28px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+    color: var(--text);
+  }
+
+  @media (max-width: 768px) { .payments-page { padding: 20px 16px; } }
+
+  /* ── Page Header ── */
+  .page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .page-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+    margin: 0 0 5px;
+  }
+
+  .page-header p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  /* ── Stats Row ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .stat-card.pending::before  { background: var(--warning); }
+  .stat-card.approved::before { background: var(--success); }
+  .stat-card.total::before    { background: var(--accent); }
+  .stat-card.subjects::before { background: var(--blue); }
+
+  .stat-label {
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--text-muted); margin-bottom: 10px;
+  }
+
+  .stat-value {
+    font-size: 28px; font-weight: 700;
+    letter-spacing: -0.8px; line-height: 1;
+  }
+
+  .stat-value.warning { color: var(--warning); }
+  .stat-value.success { color: var(--success); }
+  .stat-value.accent  { color: var(--accent); }
+  .stat-value.blue    { color: var(--blue); }
+
+  /* ── Tabs ── */
+  .tabs-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 5px;
+    margin-bottom: 24px;
+    width: fit-content;
+  }
+
+  .tab-btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    font-size: 13px; font-weight: 500;
+    color: var(--text-muted);
+    background: transparent; border: none; cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+  }
+
+  .tab-btn .tab-count {
+    font-size: 11px; font-weight: 700;
+    padding: 2px 7px; border-radius: 8px;
+    background: var(--surface-3);
+    color: var(--text-faint);
+    transition: all var(--transition);
+  }
+
+  .tab-btn.active {
+    background: var(--surface-3);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .tab-btn.active .tab-count {
+    background: var(--accent-glow);
+    color: var(--accent);
+  }
+
+  .tab-btn.active.warning-tab { color: var(--warning); }
+  .tab-btn.active.warning-tab .tab-count { background: var(--warning-bg); color: var(--warning); }
+  .tab-btn.active.success-tab { color: var(--success); }
+  .tab-btn.active.success-tab .tab-count { background: var(--success-bg); color: var(--success); }
+
+  /* ── Tab Panels ── */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Payment Card ── */
+  .payment-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-sm);
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+
+  .payment-card:hover {
+    border-color: rgba(124,92,252,0.25);
+    box-shadow: var(--shadow-md);
+  }
+
+  .payment-card.approved-card {
+    opacity: 0.75;
+    border-color: var(--border-soft);
+  }
+
+  .payment-card.approved-card:hover {
+    opacity: 1;
+    border-color: var(--success-border);
+  }
+
+  /* ── Card Layout ── */
+  .payment-card-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0;
+    align-items: stretch;
+  }
+
+  @media (max-width: 640px) {
+    .payment-card-inner { grid-template-columns: 1fr; }
+  }
+
+  /* ── Card Left ── */
+  .payment-card-left {
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ── Student Info ── */
+  .student-row {
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .student-avatar {
+    width: 42px; height: 42px;
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700;
+    text-transform: uppercase; flex-shrink: 0;
+  }
+
+  .student-avatar.pending-av {
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
+    color: var(--warning);
+  }
+
+  .student-avatar.approved-av {
+    background: var(--success-bg);
+    border: 1px solid var(--success-border);
+    color: var(--success);
+  }
+
+  .student-name {
+    font-size: 15px; font-weight: 600;
+    color: var(--text); margin: 0 0 3px;
+  }
+
+  .student-email {
+    font-size: 12px; color: var(--text-muted);
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  /* ── Payment Details ── */
+  .payment-details {
+    display: flex; flex-wrap: wrap; gap: 10px;
+  }
+
+  .detail-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    font-size: 12px; color: var(--text-muted);
+  }
+
+  .detail-chip svg { color: var(--text-faint); flex-shrink: 0; }
+  .detail-chip strong { color: var(--text); font-weight: 600; }
+
+  .detail-chip.subject-chip {
+    background: var(--accent-glow);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+
+  .detail-chip.subject-chip svg { color: var(--accent); }
+  .detail-chip.subject-chip strong { color: var(--accent); }
+
+  /* ── Card Footer / Action Row ── */
+  .payment-card-footer {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap; gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 600;
+    padding: 4px 12px; border-radius: 20px;
+    border: 1px solid transparent;
+  }
+
+  .status-badge.pending {
+    background: var(--warning-bg);
+    border-color: var(--warning-border);
+    color: var(--warning);
+  }
+
+  .status-badge.approved-badge {
+    background: var(--success-bg);
+    border-color: var(--success-border);
+    color: var(--success);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+
+  .status-dot.pending  { background: var(--warning); animation: pulse 2s infinite; }
+  .status-dot.approved { background: var(--success); }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+  }
+
+  .action-row { display: flex; align-items: center; gap: 8px; }
+
+  .btn-view-screenshot {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface-3); border: 1px solid var(--border);
+    color: var(--text-muted); font-size: 12px; font-weight: 500;
+    padding: 8px 14px; border-radius: var(--radius-md); cursor: pointer;
+    text-decoration: none;
+    transition: all var(--transition);
+  }
+
+  .btn-view-screenshot:hover {
+    background: var(--blue-bg);
+    border-color: rgba(88,166,255,0.3);
+    color: var(--blue);
+  }
+
+  .btn-approve {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--success);
+    border: none;
+    color: #fff; font-size: 13px; font-weight: 600;
+    padding: 9px 20px; border-radius: var(--radius-md); cursor: pointer;
+    transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
+  }
+
+  .btn-approve:hover {
+    background: #52d966;
+    box-shadow: 0 4px 16px rgba(63,185,80,0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-approve:active { transform: translateY(0); }
+
+  /* ── Screenshot Thumbnail (right side) ── */
+  .payment-card-screenshot {
+    width: 160px;
+    background: var(--surface-2);
+    border-left: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; position: relative; cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .payment-card-screenshot img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform 300ms ease, filter 300ms ease;
+    filter: brightness(0.85);
+  }
+
+  .payment-card-screenshot:hover img {
+    transform: scale(1.05);
+    filter: brightness(1);
+  }
+
+  .screenshot-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity var(--transition);
+  }
+
+  .payment-card-screenshot:hover .screenshot-overlay { opacity: 1; }
+
+  .screenshot-overlay span {
+    font-size: 11px; font-weight: 600;
+    color: #fff; letter-spacing: 0.5px;
+    background: rgba(0,0,0,0.5);
+    padding: 4px 10px; border-radius: 20px;
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  .no-screenshot {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px; color: var(--text-faint);
+    font-size: 11px; padding: 16px;
+    text-align: center;
+  }
+
+  @media (max-width: 640px) {
+    .payment-card-screenshot { width: 100%; height: 140px; border-left: none; border-top: 1px solid var(--border); }
+  }
+
+  /* ── Empty State ── */
+  .empty-state {
+    text-align: center;
+    padding: 64px 24px;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .empty-icon {
+    width: 56px; height: 56px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px; color: var(--text-faint);
+  }
+
+  .empty-state h3 {
+    font-size: 15px; font-weight: 600; color: var(--text); margin: 0 0 8px;
+  }
+
+  .empty-state p {
+    font-size: 13px; color: var(--text-muted); margin: 0;
+    max-width: 34ch; margin-inline: auto;
+  }
+
+  /* ── Lightbox Modal ── */
+  .lightbox-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.92); z-index: 1000;
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+
+  .lightbox-overlay.active { display: flex; }
+
+  .lightbox-inner {
+    position: relative;
+    max-width: 860px; width: 100%;
+    animation: lbIn 220ms cubic-bezier(0.16,1,0.3,1);
+  }
+
+  @keyframes lbIn {
+    from { opacity: 0; transform: scale(0.93); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .lightbox-header {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .lightbox-title {
+    font-size: 14px; font-weight: 600; color: var(--text);
+  }
+
+  .lightbox-meta {
+    font-size: 12px; color: var(--text-muted); margin-top: 2px;
+  }
+
+  .lightbox-close {
+    width: 34px; height: 34px;
+    background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted); cursor: pointer;
+    transition: all var(--transition); flex-shrink: 0;
+  }
+
+  .lightbox-close:hover { background: var(--danger-bg); color: var(--danger); border-color: rgba(248,81,73,0.3); }
+
+  .lightbox-img-wrap {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    max-height: 76vh;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 76vh;
+    object-fit: contain; display: block;
+  }
+
+  .lightbox-actions {
+    display: flex; justify-content: flex-end;
+    gap: 10px; margin-top: 14px;
+  }
+
+  .lb-btn-cancel {
+    background: var(--surface-3); border: 1px solid var(--border);
+    color: var(--text-muted); font-size: 13px; font-weight: 500;
+    padding: 9px 18px; border-radius: var(--radius-md); cursor: pointer;
+    transition: all var(--transition);
+  }
+
+  .lb-btn-cancel:hover { background: var(--surface-2); color: var(--text); }
+
+  .lb-btn-approve {
+    background: var(--success); border: none;
+    color: #fff; font-size: 13px; font-weight: 600;
+    padding: 9px 22px; border-radius: var(--radius-md); cursor: pointer;
+    display: flex; align-items: center; gap: 7px;
+    transition: background var(--transition), box-shadow var(--transition);
+  }
+
+  .lb-btn-approve:hover {
+    background: #52d966;
+    box-shadow: 0 4px 14px rgba(63,185,80,0.4);
+  }
+
+  /* ── Approve Success Notification ── */
+  .toast {
+    position: fixed; bottom: 28px; right: 28px;
+    background: var(--surface-2);
+    border: 1px solid var(--success-border);
+    border-radius: var(--radius-lg);
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: var(--shadow-lg);
+    z-index: 2000;
+    transform: translateY(80px); opacity: 0;
+    transition: transform 300ms cubic-bezier(0.16,1,0.3,1), opacity 300ms ease;
+    pointer-events: none;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  .toast-icon {
+    width: 28px; height: 28px;
+    background: var(--success-bg);
+    border: 1px solid var(--success-border);
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--success); flex-shrink: 0;
+  }
+
+  .toast-text { font-size: 13px; font-weight: 500; color: var(--text); }
+  .toast-sub  { font-size: 11px; color: var(--text-muted); }
+</style>
+
+<!-- Screenshot Lightbox -->
+<div class="lightbox-overlay" id="lightbox">
+  <div class="lightbox-inner">
+    <div class="lightbox-header">
+      <div>
+        <div class="lightbox-title" id="lbTitle">Payment Screenshot</div>
+        <div class="lightbox-meta" id="lbMeta"></div>
+      </div>
+      <button class="lightbox-close" onclick="closeLightbox()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="lightbox-img-wrap">
+      <img id="lbImg" src="" alt="Payment Screenshot">
+    </div>
+    <div class="lightbox-actions">
+      <button class="lb-btn-cancel" onclick="closeLightbox()">Close</button>
+      <form id="lbApproveForm" method="POST" action="/admin/approve_subject_payment" style="margin:0;">
+        <input type="hidden" name="email" id="lbEmail">
+        <input type="hidden" name="subject_id" id="lbSubjectId">
+        <button type="submit" class="lb-btn-approve">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Approve Payment
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast" id="toast">
+  <div class="toast-icon">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  </div>
+  <div>
+    <div class="toast-text">Payment Approved</div>
+    <div class="toast-sub">Student access granted successfully</div>
+  </div>
+</div>
+
+<div class="payments-page">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1>Payments</h1>
+      <p>Review and approve student payment requests</p>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-card pending">
+      <div class="stat-label">Pending Approval</div>
+      <div class="stat-value warning">{{ pending | length }}</div>
+    </div>
+    <div class="stat-card approved">
+      <div class="stat-label">Approved</div>
+      <div class="stat-value success">{{ approved | length }}</div>
+    </div>
+    <div class="stat-card total">
+      <div class="stat-label">Total Requests</div>
+      <div class="stat-value accent">{{ (pending | length) + (approved | length) }}</div>
+    </div>
+    <div class="stat-card subjects">
+      <div class="stat-label">Subjects Paid</div>
+      <div class="stat-value blue">{{ pending | map(attribute='subject_name') | list | unique | list | length + approved | map(attribute='subject_name') | list | unique | list | length }}</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-bar">
+    <button class="tab-btn warning-tab active" onclick="switchTab('pending', this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      Pending
+      <span class="tab-count">{{ pending | length }}</span>
+    </button>
+    <button class="tab-btn success-tab" onclick="switchTab('approved', this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      Approved
+      <span class="tab-count">{{ approved | length }}</span>
+    </button>
+  </div>
+
+  <!-- ── PENDING TAB ── -->
+  <div class="tab-panel active" id="panel-pending">
+    {% if pending %}
+      {% for p in pending %}
+      <div class="payment-card" id="card-{{ loop.index }}">
+        <div class="payment-card-inner">
+
+          <!-- Left: Details -->
+          <div class="payment-card-left">
+            <!-- Student Info -->
+            <div class="student-row">
+              <div class="student-avatar pending-av">{{ p.username[0] if p.username else '?' }}</div>
+              <div>
+                <p class="student-name">{{ p.username }}</p>
+                <p class="student-email">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                  {{ p.email }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Payment Details Chips -->
+            <div class="payment-details">
+              <div class="detail-chip subject-chip">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                <strong>{{ p.subject_name }}</strong>
+              </div>
+              <div class="detail-chip">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 15h0M2 9.5h20"/>
+                </svg>
+                Subject ID: <strong>{{ p.subject_id }}</strong>
+              </div>
+            </div>
+
+            <!-- Action Footer -->
+            <div class="payment-card-footer">
+              <span class="status-badge pending">
+                <span class="status-dot pending"></span>
+                Awaiting Approval
+              </span>
+              <div class="action-row">
+                <button
+                  class="btn-view-screenshot"
+                  onclick="openLightbox('{{ p.screenshot }}', '{{ p.username }}', '{{ p.subject_name }}', '{{ p.email }}', '{{ p.subject_id }}')"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  View Screenshot
+                </button>
+                <form method="POST" action="/admin/approve_subject_payment" style="margin:0;">
+                  <input type="hidden" name="email" value="{{ p.email }}">
+                  <input type="hidden" name="subject_id" value="{{ p.subject_id }}">
+                  <button type="submit" class="btn-approve">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Approve
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Screenshot Thumbnail -->
+          <div
+            class="payment-card-screenshot"
+            onclick="openLightbox('{{ p.screenshot }}', '{{ p.username }}', '{{ p.subject_name }}', '{{ p.email }}', '{{ p.subject_id }}')"
+          >
+            {% if p.screenshot %}
+            <img src="{{ p.screenshot }}" alt="Payment screenshot" loading="lazy">
+            <div class="screenshot-overlay">
+              <span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                Expand
+              </span>
+            </div>
+            {% else %}
+            <div class="no-screenshot">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              No image
+            </div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+      {% endfor %}
+
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <h3>All caught up!</h3>
+        <p>No pending payments right now. New requests will appear here.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- ── APPROVED TAB ── -->
+  <div class="tab-panel" id="panel-approved">
+    {% if approved %}
+      {% for p in approved %}
+      <div class="payment-card approved-card">
+        <div class="payment-card-inner">
+          <div class="payment-card-left">
+            <div class="student-row">
+              <div class="student-avatar approved-av">{{ p.username[0] if p.username else '?' }}</div>
+              <div>
+                <p class="student-name">{{ p.username }}</p>
+                <p class="student-email">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                  {{ p.email }}
+                </p>
+              </div>
+            </div>
+            <div class="payment-details">
+              <div class="detail-chip subject-chip">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                <strong>{{ p.subject_name }}</strong>
+              </div>
+              <div class="detail-chip">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 15h0M2 9.5h20"/>
+                </svg>
+                Subject ID: <strong>{{ p.subject_id }}</strong>
+              </div>
+            </div>
+            <div class="payment-card-footer">
+              <span class="status-badge approved-badge">
+                <span class="status-dot approved"></span>
+                Approved
+              </span>
+            </div>
+          </div>
+          <div class="payment-card-screenshot" style="cursor:default;">
+            {% if p.screenshot %}
+            <img src="{{ p.screenshot }}" alt="Payment screenshot" loading="lazy" style="filter:brightness(0.6) grayscale(0.3);">
+            {% else %}
+            <div class="no-screenshot">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              No image
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 15h0M2 9.5h20"/>
+          </svg>
+        </div>
+        <h3>No approved payments yet</h3>
+        <p>Payments you approve will be archived here for reference.</p>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+  /* ── Tab switching ── */
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+  }
+
+  /* ── Lightbox ── */
+  function openLightbox(src, name, subject, email, subjectId) {
+    document.getElementById('lbImg').src = src;
+    document.getElementById('lbTitle').textContent = name + ' — Payment Screenshot';
+    document.getElementById('lbMeta').textContent = subject;
+    document.getElementById('lbEmail').value = email;
+    document.getElementById('lbSubjectId').value = subjectId;
+    document.getElementById('lightbox').classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('lightbox').addEventListener('click', function(e) {
+    if (e.target === this) closeLightbox();
+  });
+
+  /* ── Escape key ── */
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeLightbox();
+  });
+
+  /* ── Show toast if redirected back after approval ── */
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('approved') === '1') {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3500);
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+</script>
+
+{% endblock %}

@@ -1,25 +1,316 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DenisExamEdge — Admin</title>
 
-  <!-- Core CSS -->
-  <link href="{{ url_for('static', filename='css/nucleo-icons.css') }}" rel="stylesheet" />
-  <link href="{{ url_for('static', filename='css/nucleo-svg.css') }}" rel="stylesheet" />
-  <link href="{{ url_for('static', filename='css/soft-ui-dashboard.css') }}" rel="stylesheet" />
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 
-  <!-- Font Awesome -->
-  <script src="https://kit.fontawesome.com/5e0f999e57.js" crossorigin="anonymous"></script>
+  <style>
+    /* ══════════════════════════════
+       Design Tokens
+    ══════════════════════════════ */
+    :root {
+      --bg:            #0d1117;
+      --surface:       #161b22;
+      --surface-2:     #1c2128;
+      --surface-3:     #21262d;
+      --border:        #30363d;
+      --text:          #e6edf3;
+      --text-muted:    #8b949e;
+      --text-faint:    #484f58;
+      --accent:        #7c5cfc;
+      --accent-hover:  #9b7dff;
+      --accent-glow:   rgba(124,92,252,0.15);
+      --accent-border: rgba(124,92,252,0.3);
+      --danger:        #f85149;
+      --success:       #3fb950;
+      --warning:       #d29922;
+      --blue:          #58a6ff;
+      --radius-sm:     6px;
+      --radius-md:     10px;
+      --radius-lg:     14px;
+      --nav-h:         58px;
+      --transition:    180ms cubic-bezier(0.16,1,0.3,1);
+      --shadow-sm:     0 1px 3px rgba(0,0,0,0.4);
+      --shadow-md:     0 4px 16px rgba(0,0,0,0.5);
+    }
+
+    /* ══════════════════════════════
+       Reset + Base
+    ══════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100dvh;
+      background: var(--bg);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    img, svg { display: block; max-width: 100%; }
+    button { cursor: pointer; font: inherit; color: inherit; }
+    a { color: inherit; text-decoration: none; }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* ══════════════════════════════
+       Topbar / Navbar
+    ══════════════════════════════ */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: var(--nav-h);
+      background: rgba(13,17,23,0.92);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 0;
+    }
+
+    /* Brand */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .brand-logo {
+      width: 30px;
+      height: 30px;
+      background: var(--accent);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-logo svg { color: #fff; }
+
+    .brand-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    .brand-name span { color: var(--accent); }
+
+    /* Nav Links */
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin-left: 28px;
+      list-style: none;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: background var(--transition), color var(--transition);
+      position: relative;
+      white-space: nowrap;
+    }
+
+    .nav-link:hover {
+      background: var(--surface-3);
+      color: var(--text);
+    }
+
+    .nav-link.active {
+      background: var(--surface-3);
+      color: var(--text);
+    }
+
+    .nav-link.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 14px;
+      right: 14px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px 2px 0 0;
+    }
+
+    .nav-badge {
+      background: var(--danger);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+      min-width: 18px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* Nav Right */
+    .nav-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-avatar {
+      width: 30px;
+      height: 30px;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent-border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .nav-admin-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.3px;
+    }
+
+    /* Mobile nav toggle */
+    .nav-toggle {
+      display: none;
+      width: 34px;
+      height: 34px;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    @media (max-width: 640px) {
+      .nav-links { display: none; flex-direction: column; position: absolute; top: var(--nav-h); left: 0; right: 0; background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 12px; gap: 4px; }
+      .nav-links.open { display: flex; }
+      .nav-link.active::after { display: none; }
+      .nav-toggle { display: flex; }
+      .nav-admin-label { display: none; }
+    }
+
+    /* ══════════════════════════════
+       Page Wrapper
+    ══════════════════════════════ */
+    .page-wrapper {
+      min-height: calc(100dvh - var(--nav-h));
+    }
+  </style>
 </head>
-<body class="g-sidenav-show bg-gray-100">
-  <main class="main-content position-relative border-radius-lg">
-    {% block content %}{% endblock %}
-  </main>
+<body>
 
-  <!-- Core JS -->
-  <script src="{{ url_for('static', filename='js/core/popper.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/core/bootstrap.min.js') }}"></script>
+<!-- ── Topbar ── -->
+<header class="topbar">
+
+  <!-- Brand -->
+  <a href="/admin" class="brand">
+    <div class="brand-logo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+        <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+      </svg>
+    </div>
+    <span class="brand-name">Denis<span>ExamEdge</span></span>
+  </a>
+
+  <!-- Nav Links -->
+  <nav>
+    <ul class="nav-links" id="navLinks">
+      <li>
+        <a href="/admin"
+           class="nav-link {% if request.path == '/admin' %}active{% endif %}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="/admin/subjects"
+           class="nav-link {% if '/subjects' in request.path %}active{% endif %}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          Subjects
+        </a>
+      </li>
+      <li>
+        <a href="/admin/payments"
+           class="nav-link {% if '/payments' in request.path %}active{% endif %}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="M2 9.5h20"/>
+            <path d="M7 15h0"/>
+          </svg>
+          Payments
+          {% if pending_count and pending_count > 0 %}
+            <span class="nav-badge">{{ pending_count }}</span>
+          {% endif %}
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Right -->
+  <div class="nav-right">
+    <span class="nav-admin-label">Admin</span>
+    <div class="nav-avatar">A</div>
+  </div>
+
+  <!-- Mobile Toggle -->
+  <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')" aria-label="Toggle menu">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+</header>
+
+<!-- ── Page Content ── -->
+<div class="page-wrapper">
+  {% block content %}{% endblock %}
+</div>
+
 </body>
 </html>
